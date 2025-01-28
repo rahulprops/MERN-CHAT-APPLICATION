@@ -7,8 +7,9 @@ import cookieParser from 'cookie-parser';
 import cloudconnection from './server/config/Cloudniary.js';
 import cors from 'cors'
 import messageRouter from './server/routes/message.route.js';
+import { server,app } from './server/socket/socket.js';
 
-const app=express()
+// const app=express()
 const port=process.env.PORT;
  //! middlewares
  app.use(bodyParser.json())
@@ -22,7 +23,7 @@ const port=process.env.PORT;
 app.use("/api/user",userRouter)
 app.use("/api/message",messageRouter)
 //! SERVER START
-app.listen(port,()=>{
+server.listen(port,()=>{
     console.log(`server is running on port :http://localhost:${port}`)
     dbConnect()
     cloudconnection()
