@@ -1,31 +1,40 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useGetMessageQuery, useSendMessageMutation } from '../featurs/messageApi';
-import { useSelector } from 'react-redux';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useGetMessageQuery, useSendMessageMutation } from "../featurs/messageApi";
+import { useSelector } from "react-redux";
 
 const ChatArea = () => {
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
+  const { selectUser } = useSelector((store) => store.auth);
+  const { user } = useSelector((store) => store.auth);
+  const currentUserId = user?._id; // Authenticated user's ID
   const { id } = useParams(); // Receiver ID
-const {user}=useSelector((store)=>store.auth)
-  const currentUserId = user?._id; // Replace with the actual user ID (e.g., from auth context or state)
 
-  // Fetch messages from the API
-  const { data: messages, isSuccess, isError, error } = useGetMessageQuery(id);
+  // Fetch messages
+  const { data: messages, isSuccess, isError, error, isLoading } = useGetMessageQuery(
+    selectUser?._id,
+    { skip: !selectUser?._id }
+  );
 
   // Send message mutation
   const [sendMessage] = useSendMessageMutation();
 
   // Handle sending a new message
   const handleSendMessage = async () => {
-    if (newMessage.trim() === '') return;
+    if (newMessage.trim() === "") return;
 
     try {
-      await sendMessage({ receverId: id, text: newMessage }).unwrap();
-      setNewMessage(''); // Clear the input field
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      await sendMessage({ receverId: selectUser?._id, text: newMessage }).unwrap();
+      setNewMessage(""); // Clear input field
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
   };
+
+  // Loading or fallback when `selectUser` is undefined
+  if (!selectUser) {
+    return <div className="flex justify-center items-center h-screen">Select a user to start chatting.</div>;
+  }
 
   return (
     <div className="flex flex-col h-screen">
@@ -37,34 +46,37 @@ const {user}=useSelector((store)=>store.auth)
           className="w-10 h-10 rounded-full mr-3"
         />
         <div>
-          <h2 className="text-lg font-bold">Chat with {id}</h2>
+          <h2 className="text-lg font-bold capitalize">{selectUser?.fullName}</h2>
           <p className="text-sm text-gray-300">Online</p>
         </div>
       </div>
 
       {/* Chat Messages */}
       <div className="flex-1 p-4 bg-gray-100 overflow-y-auto">
-        {isSuccess &&
+        {isLoading && <p>Loading messages...</p>}
+        {isError && <p className="text-red-500">Failed to load messages: {error?.message || "Something went wrong"}</p>}
+        {isSuccess && messages?.length > 0 ? (
           messages.map((message) => (
             <div
               key={message._id}
               className={`flex ${
-                message.senderId === currentUserId ? 'justify-end' : 'justify-start'
+                message.senderId === currentUserId ? "justify-end" : "justify-start"
               } mb-4`}
             >
               <div
                 className={`max-w-xs p-3 rounded-lg ${
                   message.senderId === currentUserId
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-300 text-gray-800'
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-300 text-gray-800"
                 }`}
               >
                 <p>{message.text}</p>
               </div>
             </div>
-          ))}
-
-        {isError && <p className="text-red-500">Failed to load messages: {error.message}</p>}
+          ))
+        ) : (
+          <div className="text-center text-gray-500">No messages yet. Say hi!</div>
+        )}
       </div>
 
       {/* Message Input */}
@@ -79,7 +91,12 @@ const {user}=useSelector((store)=>store.auth)
           />
           <button
             onClick={handleSendMessage}
-            className="ml-3 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            className={`ml-3 px-4 py-2 rounded-md text-white ${
+              newMessage.trim()
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
+            disabled={!newMessage.trim()}
           >
             Send
           </button>

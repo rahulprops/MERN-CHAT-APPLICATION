@@ -14,7 +14,7 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<NoChat />} />
           <Route path="profile" element={<Profile />} />
-          <Route  path='/chat/:id' element={<ChatArea/>} />
+          <Route  path='/chat' element={<ChatArea/>} />
         </Route>
         {/* Auth Pages */}
         <Route path="login" element={<Login />} />

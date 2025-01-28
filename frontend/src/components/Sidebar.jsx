@@ -1,9 +1,15 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGetUserSidebarQuery } from '../featurs/messageApi';
+import { useDispatch, useSelector } from 'react-redux';
+import { selecetUsers } from '../featurs/authSlice';
 
 const Sidebar = () => {
   const { data, isLoading, isError } = useGetUserSidebarQuery();
+  const [activeUser, setActiveUser] = useState(null); // Track the active user
+  const { selectUser } = useSelector((store) => store.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -21,6 +27,12 @@ const Sidebar = () => {
     );
   }
 
+  const handleSelect = (user) => {
+    setActiveUser(user._id); // Set the active user
+    dispatch(selecetUsers(user));
+    navigate('/chat');
+  };
+
   return (
     <div className="w-64 bg-gray-800 text-white h-screen p-4">
       <h2 className="text-lg font-bold mb-4">Chat Users</h2>
@@ -28,17 +40,18 @@ const Sidebar = () => {
         {data?.map((user) => (
           <li
             key={user._id}
-            className="flex items-center justify-between bg-gray-700 p-3 rounded-md hover:bg-gray-600"
+            className={`flex items-center justify-between p-3 rounded-md cursor-pointer ${
+              activeUser === user._id ? 'bg-blue-500' : 'bg-gray-700'
+            } hover:bg-gray-600`}
+            onClick={() => handleSelect(user)}
           >
-            <Link to={`/chat/${user._id}`} className="flex justify-between w-full">
-              <span>{user.fullName}</span>
-              <span
-                className={`w-3 h-3 rounded-full ${
-                  user.status === 'online' ? 'bg-green-500' : 'bg-red-500'
-                }`}
-                title={user.status}
-              ></span>
-            </Link>
+            <span>{user.fullName}</span>
+            <span
+              className={`w-3 h-3 rounded-full ${
+                user.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+              }`}
+              title={user.status}
+            ></span>
           </li>
         ))}
       </ul>
