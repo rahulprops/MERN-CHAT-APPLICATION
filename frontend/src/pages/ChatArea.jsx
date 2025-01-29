@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetMessageQuery, useSendMessageMutation } from "../featurs/messageApi";
 import { useSelector } from "react-redux";
+import useGetRealTimeMess from "../hooks/useGetREalTimeMess";
 
 const ChatArea = () => {
+  useGetRealTimeMess(); // ✅ Ensure real-time updates
   const [newMessage, setNewMessage] = useState("");
   const { selectUser } = useSelector((store) => store.auth);
   const { user } = useSelector((store) => store.auth);
   const currentUserId = user?._id; // Authenticated user's ID
-  const { id } = useParams(); // Receiver ID
 
   // Fetch messages
   const { data: messages, isSuccess, isError, error, isLoading } = useGetMessageQuery(
@@ -16,8 +17,11 @@ const ChatArea = () => {
     { skip: !selectUser?._id }
   );
 
+  // Real-time messages from Redux
+  const { message } = useSelector((store) => store.message);
+
   // Send message mutation
-  const [sendMessage] = useSendMessageMutation();
+  const [sendMessage, { isSuccess: sendMessageSuccess }] = useSendMessageMutation();
 
   // Handle sending a new message
   const handleSendMessage = async () => {
@@ -25,11 +29,17 @@ const ChatArea = () => {
 
     try {
       await sendMessage({ receverId: selectUser?._id, text: newMessage }).unwrap();
-      setNewMessage(""); // Clear input field
+      setNewMessage(""); // Clear input field after sending
     } catch (err) {
       console.error("Failed to send message:", err);
     }
   };
+
+  useEffect(() => {
+    if (sendMessageSuccess) {
+      setNewMessage(""); // ✅ Ensure input is cleared when message is successfully sent
+    }
+  }, [sendMessageSuccess]);
 
   // Loading or fallback when `selectUser` is undefined
   if (!selectUser) {
@@ -55,22 +65,22 @@ const ChatArea = () => {
       <div className="flex-1 p-4 bg-gray-100 overflow-y-auto">
         {isLoading && <p>Loading messages...</p>}
         {isError && <p className="text-red-500">Failed to load messages: {error?.message || "Something went wrong"}</p>}
-        {isSuccess && messages?.length > 0 ? (
-          messages.map((message) => (
+        {isSuccess && message?.length > 0 ? (
+          message.map((msg) => (
             <div
-              key={message._id}
+              key={msg._id}
               className={`flex ${
-                message.senderId === currentUserId ? "justify-end" : "justify-start"
+                msg.senderId === currentUserId ? "justify-end" : "justify-start"
               } mb-4`}
             >
               <div
                 className={`max-w-xs p-3 rounded-lg ${
-                  message.senderId === currentUserId
+                  msg.senderId === currentUserId
                     ? "bg-blue-600 text-white"
                     : "bg-gray-300 text-gray-800"
                 }`}
               >
-                <p>{message.text}</p>
+                <p>{msg.text}</p>
               </div>
             </div>
           ))

@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useLoadUserQuery, useLogoutMutation } from '../featurs/userApi';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const { user } = useSelector((store) => store.auth);
-  const [logout]=useLogoutMutation()
+  const navigate=useNavigate()
+  const [logout , {isSuccess}]=useLogoutMutation()
   const handlerLogout= async ()=>{
         await logout()
   }
+  useEffect(()=>{
+     if(isSuccess){
+      navigate("/login")
+     }
+  },[isSuccess])
   return (
     <nav className="bg-blue-600 text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">

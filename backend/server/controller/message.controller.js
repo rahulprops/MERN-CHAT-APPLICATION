@@ -4,6 +4,7 @@ import errorHandler from "../middleware/error-logs/errorHandler.js"
 import userModel from "../model/user.model.js";
 import messageModel from "../model/message.model.js";
 import conversationModel from "../model/conversation.model.js";
+import { getReceiverSocketId } from "../socket/socket.js";
 //! getUserSidebar
 export const getUserSidebar=async (req,res)=>{
     try{
@@ -38,36 +39,44 @@ export const getMessage= async (req,res)=>{
     }
 }
 //! send message
-export const sendMessage=async (req,res)=>{
-    const {id:receiverId}=req.params;
-    const senderId=req.user._id;
-    const {text,image}=req.body;
-    try{
-        let conversation=await conversationModel.findOne({
-            participants:{$all:[senderId,receiverId]}
-        })
-        if(!conversation){
-            conversation= await conversationModel.create({
-                participants:[senderId,receiverId]
-            })
+export const sendMessage = async (req, res) => {
+    const { id: receiverId } = req.params;
+    const senderId = req.user._id;
+    const { text } = req.body;
+  
+    try {
+      let conversation = await conversationModel.findOne({
+        participants: { $all: [senderId, receiverId] }
+      });
+  
+      if (!conversation) {
+        conversation = await conversationModel.create({
+          participants: [senderId, receiverId]
+        });
+      }
+  
+      const newMessage = new messageModel({
+        senderId,
+        receiverId,
+        text,
+      });
+  
+      if (newMessage) {
+        conversation.message.push(newMessage._id);
+        await Promise.all([conversation.save(), newMessage.save()]);
+  
+        // Fixing socket.io issue
+        const receiverSocketId = getReceiverSocketId(receiverId); 
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit("newMessage", newMessage);
         }
-        const newMessage=new messageModel({
-            senderId,
-            receiverId,
-            text,
-        })
-        if(newMessage){
-            conversation.message.push(newMessage._id)
-            // await conversation.save()
-            // await newMessage.save()
-            await Promise.all([conversation.save(),newMessage.save()])
-            // realtime socket.io
-            return errorHandler(res,201,"message send sucess",newMessage)
-        }else{
-            return errorHandler(res,400,"message send failed")
-        }
-
-    }catch(err){
-        return errorHandler(res,500,`server error ${err.message}`)
+  
+        return errorHandler(res, 201, "Message sent successfully", newMessage);
+      } else {
+        return errorHandler(res, 400, "Message send failed");
+      }
+    } catch (err) {
+      return errorHandler(res, 500, `Server error ${err.message}`);
     }
-}
+  };
+  

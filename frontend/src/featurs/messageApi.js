@@ -1,4 +1,5 @@
 import apiSlice from "./apiSlice";
+import { setMessage } from "./messageSlice";
 
 export const messageApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -19,6 +20,16 @@ export const messageApi = apiSlice.injectEndpoints({
       transformResponse: (data) => {
         return data.data;
       },
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setMessage(data)); // Ensure data is stored correctly
+        } catch (err) {
+          console.log("Error fetching messages:", err);
+        }
+      },
+      providesTags:["refess"]
+      
     }),
     sendMessage: builder.mutation({
       query: ({ receverId, text }) => ({
@@ -26,6 +37,7 @@ export const messageApi = apiSlice.injectEndpoints({
         method: "POST",
         body:{text}
       }),
+      invalidatesTags:["refess"]
       
     }),
   }),
